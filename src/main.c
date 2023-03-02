@@ -23,6 +23,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <dc_util/io.h>
+#include <ndbm.h>
 
 struct http_packet_info
 {
@@ -955,6 +956,13 @@ char * create_404_packet(const struct dc_env *env, struct dc_error *err);
 char *send_file(const struct dc_env *env, struct dc_error *err, __off_t size);
 void copy(int from_fd, int to_fd, size_t count);
 
+typedef struct {
+   uint32_t id;
+   char *name;
+} Object;
+int save_object(struct dc_env* env, struct dc_error* err, DBM* db, Object* object);
+int load_object(struct dc_env* env, struct dc_error* err, DBM* db, uint32_t id, Object** object);
+
 void read_message_handler(const struct dc_env *env, struct dc_error *err, uint8_t **raw_data, int client_socket, struct http_packet_info * httpPacketInfo)
 {
     DC_TRACE(env);
@@ -1153,4 +1161,59 @@ void send_message_handler(const struct dc_env *env, struct dc_error *err, int cl
     close(httpPacketInfo->read_fd);
 
     *closed = true;
+}
+
+int save_object(struct dc_env* env, struct dc_error* err, DBM* db, Object* object){
+    int error = -1;
+    // serializing the struct into a binary val
+    size_t size = sizeof(object->id) + dc_strlen(env, object->name) + 1;
+    uint8_t* buffer = malloc(size);
+    if (!buffer){
+        fprintf(stderr, "failed to allocate memory in save_object()\n");
+        return error;
+    }
+
+    uint32_t id = htonl(object->id);
+    dc_memcpy(env, buffer, &id, sizeof(object->id));
+    // don't really know if we need name or not
+    dc_strcpy(env, (char*)buffer + sizeof(uint32_t), object->name);
+    datum k, v;
+    k.dptr = (char *)&object->id;
+    k.dsize = sizeof(object->id);
+    v.dptr = buffer;
+    v.dsize = size;
+
+    // store the struct in the database
+    if (dbm_store(db, k , v, DBM_REPLACE) != 0){
+        fprintf(stderr, "failed to store struct struct [save_object()]\n");
+        free(buffer);
+        return error;
+    }
+
+    free(buffer);
+    return 0;
+}
+
+int load_object(struct dc_env* env, struct dc_error* err, DBM* db, uint32_t id, Object** object){
+    int error = -1;
+    // retrieve the struct from the db
+    datum k = {(char*)&id, sizeof(uint32_t)};
+    datum v = dbm_fetch(db, k);
+    if (v.dptr){
+        // deserialize the binary value into a struct
+        uint32_t unpacked_id = ntohl(*(uint32_t*)v.dptr);
+        char* name = (char*)v.dptr + sizeof(uint32_t);
+        *object = malloc(sizeof(Object));
+        if (!*object){
+            fprintf(stderr, "failed to allocate memory [load_object()]");
+            free(v.dptr);
+            return error;
+        }
+        (*object)->id = unpacked_id;
+        (*object)->name = name;
+        return 0;
+    } else {
+        fprintf(stderr, "key not found [load_object()]\n");
+        return error;
+    }
 }
