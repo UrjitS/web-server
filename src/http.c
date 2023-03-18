@@ -7,7 +7,7 @@
 #include <string.h>
 
 
-    static const int BLOCK_SIZE = 1024 * 4;
+static const int BLOCK_SIZE = 1024 * 4;
 
 
 ssize_t read_message_handler(const struct dc_env *env, struct dc_error *err, uint8_t **raw_data, int client_socket)

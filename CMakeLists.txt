@@ -35,17 +35,19 @@ set(PROCESS_SERVER_REQUIRED_LIBRARIES_LIST
         dc_util
         )
 
-set(ECHO_SOURCE_LIST
-        ${SOURCE_DIR}/echo.c
+set(HTTP_SOURCE_LIST
+        ${SOURCE_DIR}/http.c
         )
-set(ECHO_HEADER_LIST
+set(HTTP_HEADER_LIST
         ${INCLUDE_DIR}/processor.h
         )
-set(ECHO_REQUIRED_LIBRARIES_LIST
+set(HTTP_REQUIRED_LIBRARIES_LIST
         dc_error
         dc_env
         dc_c
         dc_posix
+        dc_posix_xsi
+        dc_unix
         dc_util
         )
 set(TEST_HEADER_LIST
@@ -405,4 +407,4 @@ find_path(ENV_INCLUDE_DIR dc_env/env.h)
 include_directories(${ENV_INCLUDE_DIR})
 
 add_executable_target(process-server PROCESS_SERVER_SOURCE_LIST PROCESS_SERVER_SOURCE_MAIN PROCESS_SERVER_HEADER_LIST PROCESS_SERVER_REQUIRED_LIBRARIES_LIST "" "")
-add_library_target(echo SHARED ECHO_SOURCE_LIST ECHO_HEADER_LIST ECHO_REQUIRED_LIBRARIES_LIST "" "")
+add_library_target(http SHARED HTTP_SOURCE_LIST HTTP_HEADER_LIST HTTP_REQUIRED_LIBRARIES_LIST "" "")
