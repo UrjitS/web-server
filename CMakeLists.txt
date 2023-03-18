@@ -15,6 +15,7 @@ set(SANITIZE TRUE)
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
+set(CMAKE_C_FLAGS "-lgdbm -lgdbm_compat")
 
 set(PROCESS_SERVER_SOURCE_LIST
         )
@@ -33,15 +34,7 @@ set(PROCESS_SERVER_REQUIRED_LIBRARIES_LIST
         dc_unix
         dc_util
         )
-set(CLIENT_SOURCE_LIST
-        )
-set(CLIENT_SOURCE_MAIN
-        ${SOURCE_DIR}/main-client.c
-        )
-set(CLIENT_HEADER_LIST
-        )
-set(CLIENT_REQUIRED_LIBRARIES_LIST
-        )
+
 set(ECHO_SOURCE_LIST
         ${SOURCE_DIR}/echo.c
         )
@@ -411,6 +404,5 @@ include_directories(${ENV_INCLUDE_DIR})
 find_path(ENV_INCLUDE_DIR dc_env/env.h)
 include_directories(${ENV_INCLUDE_DIR})
 
-add_executable_target(client CLIENT_SOURCE_LIST CLIENT_SOURCE_MAIN CLIENT_HEADER_LIST CLIENT_REQUIRED_LIBRARIES_LIST "" "")
 add_executable_target(process-server PROCESS_SERVER_SOURCE_LIST PROCESS_SERVER_SOURCE_MAIN PROCESS_SERVER_HEADER_LIST PROCESS_SERVER_REQUIRED_LIBRARIES_LIST "" "")
 add_library_target(echo SHARED ECHO_SOURCE_LIST ECHO_HEADER_LIST ECHO_REQUIRED_LIBRARIES_LIST "" "")
