@@ -16,7 +16,7 @@ set(SANITIZE TRUE)
 set(SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
-set(CMAKE_C_FLAGS "-lgdbm -lgdbm_compat")
+#set(CMAKE_C_FLAGS "-lgdbm -lgdbm_compat")
 
 set(PROCESS_SERVER_SOURCE_LIST
         )
@@ -57,8 +57,10 @@ set(TEST_SOURCE_LIST
         )
 set(TEST_REQUIRED_LIBRARIES_LIST
         )
-add_executable(database_ui UI/database_ui.c)
+add_executable(database_ui database_ui.c)
 target_link_libraries(database_ui ncurses)
+target_link_libraries(database_ui gdbm_compat)
+
 
 list(APPEND TEST_REQUIRED_LIBRARIES_LIST
         ${BINARY_REQUIRED_LIBRARIES_LIST}
@@ -289,7 +291,7 @@ function(link_libraries target_name libraries_list)
         find_library(LIB ${LIBRARY} REQUIRED)
         get_filename_component(LIB_DIR ${LIB} DIRECTORY)
         link_directories(${LIB_DIR})
-        target_link_libraries(${target_name} PRIVATE ${LIB})
+#        target_link_libraries(${target_name} PRIVATE ${LIB})
         unset(LIB CACHE)
         unset(LIB_DIR CACHE)
     endforeach ()
@@ -312,59 +314,6 @@ endfunction()
 function(link_gtk_libraries target_name)
 endfunction()
 
-function(add_executable_target target_name source_files main_source_files header_files libraries_files link_libraries_fn install_name)
-    add_executable(${target_name} ${${source_files}} ${${main_source_files}} ${${header_files}})
-
-    list(LENGTH ${libraries_files} list_length)
-    if (list_length)
-        link_libraries(${target_name} ${libraries_files})
-    endif ()
-
-    target_link_libraries(${target_name} PRIVATE -fsanitize=undefined)
-
-    if (link_libraries_fn STREQUAL "link_ncurses_libraries")
-        link_ncurses_libraries(${target_name})
-    elseif (link_libraries_fn STREQUAL "link_gtk_libraries")
-        link_gtk_libraries(${target_name})
-    endif ()
-
-    add_dependencies(${target_name} doxygen)
-    add_dependencies(${target_name} clang-tidy-${target_name})
-    clangtidy(${target_name} ${source_files} ${main_source_files})
-
-    if (NOT "${install_name}" STREQUAL "")
-        set_target_properties(${target_name} PROPERTIES OUTPUT_NAME ${install_name})
-        install(TARGETS ${target_name} DESTINATION bin)
-    endif ()
-endfunction()
-
-function(add_library_target target_name library_type source_files header_files libraries_files link_libraries_fn install_name)
-    add_library(${target_name} ${library_type} ${${source_files}} ${${main_source_files}} ${${header_files}})
-
-    list(LENGTH ${libraries_files} list_length)
-    if(list_length)
-        link_libraries(${target_name} ${libraries_files})
-    endif()
-
-    target_link_libraries(${target_name} PRIVATE -fsanitize=undefined)
-    target_link_libraries(${target_name}  PRIVATE -lbsd)
-
-
-    if(link_libraries_fn STREQUAL "link_ncurses_libraries")
-        link_ncurses_libraries(${target_name})
-    elseif(link_libraries_fn STREQUAL "link_gtk_libraries")
-        link_gtk_libraries(${target_name})
-    endif()
-
-    add_dependencies(${target_name} doxygen)
-    add_dependencies(${target_name} clang-tidy-${target_name})
-    clangtidy(${target_name} ${source_files} "")
-
-    if(NOT "${install_name}" STREQUAL "")
-        set_target_properties(${target_name} PROPERTIES OUTPUT_NAME ${install_name})
-        install(TARGETS ${target_name} DESTINATION bin)
-    endif ()
-endfunction()
 
 function(add_test_target target_name source_files header_files test_source_files test_header_files libraries_files link_libraries_fn)
     add_executable(${target_name} ${${source_files}} ${${HEADER_LIST}} ${${test_source_files}} ${${test_header_files}})
@@ -411,6 +360,3 @@ include_directories(${ENV_INCLUDE_DIR})
 find_path(ENV_INCLUDE_DIR dc_env/env.h)
 include_directories(${ENV_INCLUDE_DIR})
 
-add_executable_target(http-server PROCESS_SERVER_SOURCE_LIST PROCESS_SERVER_SOURCE_MAIN PROCESS_SERVER_HEADER_LIST PROCESS_SERVER_REQUIRED_LIBRARIES_LIST "" "")
-target_link_libraries(http-server PRIVATE -lbsd)
-add_library_target(http SHARED HTTP_SOURCE_LIST HTTP_HEADER_LIST HTTP_REQUIRED_LIBRARIES_LIST "" "")
