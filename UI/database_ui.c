@@ -6,55 +6,78 @@
 #include <gdbm-ndbm.h>
 
 typedef struct {
-    char * key;
-    char * value;
+    char *key;
+    char *value;
 } Object;
-
 
 void init_ncurses(void);
 
-_Noreturn void display_results(void);
+_Noreturn void display_results(DBM *db);
 
-int main(int argc, char *argv[]){
+Object *load_object(DBM *db, char *id);
 
+int main(int argc, char *argv[]) {
     // connect to the db and get the values
     DBM * db = dbm_open("webdatabase", O_CREAT | O_RDWR, 0666);
     if (!db) {
         fprintf(stderr, "Failed to open database.\n");
     }
     init_ncurses();
-    display_results();
+    display_results(db);
     return 0;
 }
 
-
-void init_ncurses(void){
+void init_ncurses(void) {
     initscr();
     cbreak();
     noecho();
 }
 
-_Noreturn void display_results(void){
-
-    while (1){
+void display_results(DBM* db){
+    while (1) {
         mvprintw(0, 0, "RESULTS FROM THE DATABASE");
-        mvprintw(2, 0, "Object key: %s", "dummy");
-        mvprintw(3, 0, "Object value: %s", "dummy2");
         refresh();
+
+        // Loop through all the keys in the database and display the corresponding values
+        int y = 2;
+        char *key_str;
+        for (datum key = dbm_firstkey(db); key.dptr != NULL; key = dbm_nextkey(db)) {
+            key_str = (char *)key.dptr;
+            Object *object = load_object(db, key_str);
+            if (object != NULL) {
+                mvprintw(y++, 0, "Object key: %s", object->key);
+                mvprintw(y++, 0, "Object value: %s", object->value);
+                refresh();
+                free(object->key);
+                free(object->value);
+                free(object);
+            } else {
+                mvprintw(y++, 0, "Ain't nothing here boi");
+                refresh();
+            }
+        }
+
+        // Wait for user input before repeating
+        mvprintw(y++, 0, "Press any key to see the results again.");
+        refresh();
+        getch();
     }
 }
 
-Object * load_object(DBM* db, char * id) {
+
+Object *load_object(DBM *db, char *id) {
     Object *obj = malloc(sizeof(Object));
-    datum key, value; // NOLINT(readability-isolate-declaration)
+    datum key, value;
     key.dptr = id;
-    key.dsize = (int)strlen(key.dptr);
-    value = dbm_fetch(db, key); // NOLINT(concurrency-mt-unsafe)
+    key.dsize = strlen(id) + 1; // add 1 for null terminator
+    value = dbm_fetch(db, key);
     if (value.dptr != NULL) {
-        obj->key = strdup(key.dptr);
+        obj->key = strdup(id);
         obj->value = malloc(value.dsize + 1);
         memcpy(obj->value, value.dptr, value.dsize);
         obj->value[value.dsize] = '\0';
+    } else {
+        obj = NULL;
     }
     return obj;
 }
