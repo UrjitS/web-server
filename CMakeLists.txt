@@ -18,6 +18,11 @@ set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 set(CMAKE_C_FLAGS "-lgdbm -lgdbm_compat")
 
+add_executable(database_ui UI/database_ui.c)
+target_link_libraries(database_ui ncurses)
+target_link_libraries(database_ui gdbm_compat)
+
+
 set(PROCESS_SERVER_SOURCE_LIST
         )
 set(PROCESS_SERVER_SOURCE_MAIN
@@ -57,8 +62,7 @@ set(TEST_SOURCE_LIST
         )
 set(TEST_REQUIRED_LIBRARIES_LIST
         )
-add_executable(database_ui UI/database_ui.c)
-target_link_libraries(database_ui ncurses)
+
 
 list(APPEND TEST_REQUIRED_LIBRARIES_LIST
         ${BINARY_REQUIRED_LIBRARIES_LIST}
@@ -347,7 +351,7 @@ function(add_library_target target_name library_type source_files header_files l
     endif()
 
     target_link_libraries(${target_name} PRIVATE -fsanitize=undefined)
-    target_link_libraries(${target_name}  PRIVATE -lbsd)
+#    target_link_libraries(${target_name}  PRIVATE -lbsd)
 
 
     if(link_libraries_fn STREQUAL "link_ncurses_libraries")
@@ -412,5 +416,5 @@ find_path(ENV_INCLUDE_DIR dc_env/env.h)
 include_directories(${ENV_INCLUDE_DIR})
 
 add_executable_target(http-server PROCESS_SERVER_SOURCE_LIST PROCESS_SERVER_SOURCE_MAIN PROCESS_SERVER_HEADER_LIST PROCESS_SERVER_REQUIRED_LIBRARIES_LIST "" "")
-target_link_libraries(http-server PRIVATE -lbsd)
+#target_link_libraries(http-server PRIVATE -lbsd)
 add_library_target(http SHARED HTTP_SOURCE_LIST HTTP_HEADER_LIST HTTP_REQUIRED_LIBRARIES_LIST "" "")

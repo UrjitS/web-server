@@ -3,7 +3,7 @@
 #include <ncurses.h>
 #include <string.h>
 #include <malloc.h>
-#include <gdbm-ndbm.h>
+#include <ndbm.h>
 
 typedef struct {
     char *key;

@@ -1,3 +1,4 @@
+#include "processor.h"
 #include <dc_c/dc_stdio.h>
 #include <dc_c/dc_stdlib.h>
 #include <dc_c/dc_string.h>
@@ -12,6 +13,7 @@
 #include <dc_posix/sys/dc_socket.h>
 #include <dc_posix/sys/dc_wait.h>
 #include <dc_unix/dc_getopt.h>
+#include <dc_util/io.h>
 #include <dc_util/networking.h>
 #include <dc_util/system.h>
 #include <dc_util/types.h>
@@ -21,9 +23,7 @@
 #include <signal.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
-#include "processor.h"
 #include <sys/stat.h>
-#include <dc_util/io.h>
 
 typedef void (*read_message_func)(const struct dc_env *env, struct dc_error *err, uint8_t **raw_data, int client_socket, struct http_packet_info *packet_info);
 typedef void (*process_message_func)(const struct dc_env *env, struct dc_error *err, struct http_packet_info * httpPacketInfo);

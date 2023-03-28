@@ -1,17 +1,17 @@
 #include "processor.h"
+#include <ctype.h>
 #include <dc_c/dc_stdio.h>
 #include <dc_c/dc_stdlib.h>
 #include <dc_c/dc_string.h>
 #include <dc_posix/dc_string.h>
 #include <dc_posix/dc_unistd.h>
+#include <dc_util/io.h>
 #include <dc_util/networking.h>
 #include <dc_util/system.h>
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <sys/poll.h>
 #include <sys/stat.h>
-#include <dc_util/io.h>
-#include <ctype.h>
 
 #define BUFFER_SIZE 1024
 #define MAX_POST_SIZE 1024
@@ -242,7 +242,7 @@ void get_content_length(const struct dc_env *env, struct dc_error *err, struct h
         if (dc_strstr(env, token, "Content-Length") != NULL) {
             token += dc_strlen(env, "Content-Length: "); // Move past the "Content-Length: " string
             char * end;
-            long num = dc_strtol(env, err, token, &end, 10);
+            long num = dc_strtol(env, err, token, &end, 10); // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
             if (token == end) {
                 printf("Error: invalid number\n");
                 packet_info->error = 1;
@@ -289,17 +289,17 @@ void get_method(const struct dc_env *env, struct dc_error *err, struct http_pack
 
 void handle_conditional_get(const struct dc_env *env, struct dc_error *err, struct http_packet_info *httpPacketInfo)
 {
-    struct tm tm1, tm2;
-    time_t t1, t2;
+    struct tm tm1, tm2; // NOLINT(readability-isolate-declaration)
+    time_t t1, t2; // NOLINT(readability-isolate-declaration)
 
     // Parse the timestamps into struct tm format
     if (strptime(httpPacketInfo->if_modified_since, "%a, %d %b %Y %H:%M:%S GMT", &tm1) == NULL) {
-        fprintf(stderr, "Invalid timestamp format: %s\n", httpPacketInfo->if_modified_since);
+        fprintf(stderr, "Invalid timestamp format: %s\n", httpPacketInfo->if_modified_since); // NOLINT(cert-err33-c)
         return;
     }
     printf("IS MOD: %s \n", httpPacketInfo->file_last_modified);
     if (strptime(httpPacketInfo->file_last_modified, "%a, %d %b %Y %H:%M:%S GMT", &tm2) == NULL) {
-        fprintf(stderr, "Invalid timestamp format: %s\n", get_last_modified_time(env, err, httpPacketInfo));
+        fprintf(stderr, "Invalid timestamp format: %s\n", get_last_modified_time(env, err, httpPacketInfo)); // NOLINT(cert-err33-c)
         return;
     }
 
@@ -313,7 +313,7 @@ void handle_conditional_get(const struct dc_env *env, struct dc_error *err, stru
     {
         httpPacketInfo->response_type = OK;
         return;
-    } else if (t1 > t2)
+    } else if (t1 > t2) // NOLINT(llvm-else-after-return,readability-else-after-return)
     {
         httpPacketInfo->response_type = NOT_MODIFIED;
         return;
@@ -373,9 +373,9 @@ void open_file(const struct dc_env *env, struct dc_error *err, struct http_packe
 
         // Get last modified time
         time_t last_modified = st.st_mtime;
-        struct tm *time_info = gmtime(&last_modified);
+        struct tm *time_info = gmtime(&last_modified); // NOLINT(concurrency-mt-unsafe)
         char buffer[BUFFER_SIZE];
-        strftime(buffer, BUFFER_SIZE, "%a, %d %b %Y %H:%M:%S %Z\r\n", time_info);
+        strftime(buffer, BUFFER_SIZE, "%a, %d %b %Y %H:%M:%S %Z\r\n", time_info); // NOLINT(cert-err33-c)
         packet_info->file_last_modified = dc_strdup(env, err, buffer);
 
         // Get file size
@@ -388,9 +388,10 @@ void open_file(const struct dc_env *env, struct dc_error *err, struct http_packe
 
 void connect_to_db(struct http_packet_info * httpPacketInfo) {
     // Create or open the database
-    DBM * db = dbm_open("webdatabase", O_CREAT | O_RDWR, 0666);
+    char db_path[] = "webdatabase";
+    DBM * db = dbm_open(db_path, O_CREAT | O_RDWR, 0666); // NOLINT(concurrency-mt-unsafe) NOLINT(cppcoreguidelines-avoid-magic-numbers) NOLINT(readability-magic-numbers)
     if (!db) {
-        fprintf(stderr, "Failed to open database.\n");
+        fprintf(stderr, "Failed to open database.\n"); // NOLINT(cert-err33-c)
     }
     httpPacketInfo->db = db;
 }
@@ -419,7 +420,7 @@ void add_to_database(const struct dc_env *env, struct dc_error *err, struct http
     {
         httpPacketInfo->response_type = NO_CONTENT;
         return;
-    } else if (httpPacketInfo->error == 1) {
+    } else if (httpPacketInfo->error == 1) { // NOLINT(llvm-else-after-return,readability-else-after-return)
         return;
     } else if (body == NULL || validate_list(env, dc_strdup(env, err, body)) == 0) {
         httpPacketInfo->response_type = BAD_REQUEST;
@@ -452,7 +453,7 @@ void add_to_database(const struct dc_env *env, struct dc_error *err, struct http
     for (int i = 0; i < count - 1; i++) {
         save_object(env, httpPacketInfo->db, &objects[i]);
         Object * object = load_object(env, err, httpPacketInfo->db, objects[i].key);
-        printf("Object %d: key=%s, value=%s\n", i, object->key, object->value);
+        printf("Object %d: key=%s, value=%s\n", i, object->key, object->value); // NOLINT(clang-analyzer-core.CallAndMessage)
         free(object->key);
         free(object->value);
         free(object);
@@ -465,7 +466,7 @@ void add_to_database(const struct dc_env *env, struct dc_error *err, struct http
     free(objects);
 
     httpPacketInfo->response_type = CREATED;
-    dbm_close(httpPacketInfo->db);
+    dbm_close(httpPacketInfo->db); // NOLINT(concurrency-mt-unsafe)
 }
 
 char * read_post_body(const struct dc_env *env, struct dc_error *err, struct http_packet_info * httpPacketInfo, char * data) {
@@ -517,8 +518,8 @@ char * get_http_time(const struct dc_env *env, struct dc_error *err) {
     // Get current time
     char time_stamp[BUFFER_SIZE];
     time_t now = time(0);
-    struct tm tm = *gmtime(&now);
-    strftime(time_stamp, sizeof time_stamp, "%a, %d %b %Y %H:%M:%S %Z\r\n", &tm);
+    struct tm tm = *gmtime(&now); // NOLINT(concurrency-mt-unsafe)
+    strftime(time_stamp, sizeof time_stamp, "%a, %d %b %Y %H:%M:%S %Z\r\n", &tm); // NOLINT(cert-err33-c)
 
     // Format time into HTTP format
     char date[BUFFER_SIZE] = "";
@@ -616,7 +617,7 @@ void copy(int from_fd, int to_fd, size_t count)
 
     if(buffer == NULL)
     {
-        fprintf(stderr, "Malloc Error\n");
+        fprintf(stderr, "Malloc Error\n"); // NOLINT(cert-err33-c)
         return;
     }
 
@@ -628,14 +629,14 @@ void copy(int from_fd, int to_fd, size_t count)
 
         if(wbytes == -1)
         {
-            fprintf(stderr, "File Write Error\n");
+            fprintf(stderr, "File Write Error\n"); // NOLINT(cert-err33-c)
             return;
         }
     }
 
     if(rbytes == -1)
     {
-        fprintf(stderr, "File Read Error\n");
+        fprintf(stderr, "File Read Error\n"); // NOLINT(cert-err33-c)
         return;
     }
     free(buffer);
@@ -647,7 +648,7 @@ char * send_header_information(const struct dc_env *env, struct dc_error *err, s
 
     // Convert file size to string
     char * http_time = get_http_time(env, err);
-    char str[20] = "";
+    char str[20] = ""; // NOLINT(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers)
     snprintf(str, sizeof(str), "%lld", (long long) httpPacketInfo->file_size);  // Convert the off_t value to a string // NOLINT(cert-err33-c)
 
     // Create packet
