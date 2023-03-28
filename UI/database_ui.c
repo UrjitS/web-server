@@ -14,9 +14,9 @@ void init_ncurses(void);
 
 _Noreturn void display_results(DBM *db);
 
-Object *load_object(DBM *db, char *id);
+Object *load_object(DBM *db, datum *id);
 
-int main(int argc, char *argv[]) {
+int main(__attribute__((unused)) int argc, char *argv[]) {
     // connect to the db and get the values
     DBM * db = dbm_open("webdatabase", O_CREAT | O_RDWR, 0666);
     if (!db) {
@@ -24,7 +24,6 @@ int main(int argc, char *argv[]) {
     }
     init_ncurses();
     display_results(db);
-    return 0;
 }
 
 void init_ncurses(void) {
@@ -42,18 +41,15 @@ void display_results(DBM* db){
         int y = 2;
         char *key_str;
         for (datum key = dbm_firstkey(db); key.dptr != NULL; key = dbm_nextkey(db)) {
-            key_str = (char *)key.dptr;
-            //mvprintw(y++, 0, "Object key: %s", key_str);
-            Object *object = load_object(db, key_str);
+            key.dptr[key.dsize] = '\0';
+            Object *object = load_object(db, &key);
             if (object != NULL) {
-                //printf("\nKey: %s, Value: %s\n", object->key, object->value);
                 mvprintw(y++, 0, "Object key: %s Object value: %s", object->key, object->value);
                 refresh();
                 free(object->key);
                 free(object->value);
                 free(object);
             } else {
-                //printf("\nKey %s not found in the database.\n", key_str);
                 mvprintw(y++, 0, "Key (%s) not found in the database", key_str);
                 refresh();
             }
@@ -66,15 +62,12 @@ void display_results(DBM* db){
 }
 
 
-Object *load_object(DBM *db, char *id) {
+Object *load_object(DBM *db, datum *id) {
     Object *obj = malloc(sizeof(Object));
-    datum key, value;
-    key.dptr = id;
-    key.dsize = (int) strlen(key.dptr) + 1; // add 1 for null terminator
-    value = dbm_fetch(db, key);
-    //printf("\nKey: %s, Value: %s\n", id, value.dptr);
+    datum  value;
+    value = dbm_fetch(db, *id);
     if (value.dptr != NULL) {
-        obj->key = strdup(key.dptr);
+        obj->key = strdup(id->dptr);
         obj->value = malloc(value.dsize + 1);
         memcpy(obj->value, value.dptr, value.dsize);
         obj->value[value.dsize] = '\0';
